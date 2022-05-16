@@ -36,7 +36,7 @@ export class HybridStorage extends AsyncLocalStorage {
    */
   override async setItem(key: string, value: Serializable) {
     const etag = await super.setItem(key, value);
-    await this._synchronizer.commitChange({
+    await this._synchronizer.commitLocalChange({
       type: 'set',
       target: 'remote',
       key,
@@ -50,7 +50,7 @@ export class HybridStorage extends AsyncLocalStorage {
    */
   override async removeItem(key: string): Promise<void> {
     await super.removeItem(key);
-    await this._synchronizer.commitChange({
+    await this._synchronizer.commitLocalChange({
       type: 'remove',
       target: 'remote',
       key,

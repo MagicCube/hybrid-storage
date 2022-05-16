@@ -29,7 +29,7 @@ export class StorageSynchronizer {
    * @param commit 需要提交的本地变更。
    * @param autoPushAfterCommit 指定是否在提交后立即调用 `push()` 方法推送本地变更至服务器。默认为 `true`。
    */
-  async commitChange(commit: SyncCommit, autoPushAfterCommit = true) {
+  async commitLocalChange(commit: SyncCommit, autoPushAfterCommit = true) {
     await this._commitQueue.enqueue(commit, autoPushAfterCommit);
   }
 
@@ -40,7 +40,7 @@ export class StorageSynchronizer {
     const remoteIndex = await this.remoteStorage.getMetaIndex();
     const localIndex = await this.localStorage.getMetaIndex();
     const commits = this._generatePatches(localIndex, remoteIndex);
-    this._applyCommits(commits);
+    await this._applyCommits(commits);
   }
 
   /**
