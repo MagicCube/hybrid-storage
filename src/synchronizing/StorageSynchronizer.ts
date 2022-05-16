@@ -25,9 +25,9 @@ export class StorageSynchronizer {
   }
 
   /**
-   * 将指定的本地变更提交到变更队列，并尝试立刻执行 `push()` 方法推送至服务端。
+   * 将指定的本地变更提交到变更队列，并尝试立刻推送至云端。
    * @param commit 需要提交的本地变更。
-   * @param autoPushAfterCommit 指定是否在提交后立即调用 `push()` 方法推送本地变更至服务器。默认为 `true`。
+   * @param autoPushAfterCommit 指定是否在提交成功后，立即推送本地变更至云端。默认为 `true`。
    */
   async commitLocalChange(commit: SyncCommit, autoPushAfterCommit = true) {
     await this._commitQueue.enqueue(commit, autoPushAfterCommit);
@@ -53,7 +53,7 @@ export class StorageSynchronizer {
   /**
    * 发起本地与远程之间的同步。
    *
-   * 此方法先将调用 `pull()` 从服务端更新数据到本地，然后再调用 `push()` 将本地的变更推送到服务端。
+   * 此方法先将调用 `pull()` 从云端更新数据到本地，然后再调用 `push()` 将本地的变更推送到云端。
    */
   async synchronize() {
     await this.pull();
