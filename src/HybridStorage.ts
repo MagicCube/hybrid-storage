@@ -1,10 +1,10 @@
 import type OSS from 'ali-oss';
 
-import { AliOSSStorage, AsyncLocalStorage } from '../storages';
+import { AliOSSStorage, AsyncLocalStorage } from './storages';
 
-import { StorageSynchronizer } from './StorageSynchronizer';
-import type { Serializable } from './types';
-import { SyncState } from './types';
+import { StorageSynchronizer } from './core/StorageSynchronizer';
+import type { Serializable } from './core/types';
+import { SyncState } from './core/types';
 
 /**
  * `HybridStorage` 是一种可在本地离线与云端之间同步 JSON 对象的存储器。
