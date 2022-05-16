@@ -1,4 +1,4 @@
-import type { AsyncStorage, StorageMetaIndex } from '@/storages';
+import type { AsyncStorage, StorageMetaIndex } from '@/storing';
 
 import type { SyncOperation } from './SyncOperation';
 

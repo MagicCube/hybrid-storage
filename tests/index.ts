@@ -1,5 +1,5 @@
 import { AliOSS, AsyncLocalStorage, HybridStorage } from '@/index';
-import { AliOSSStorage } from '@/storages';
+import { AliOSSStorage } from '@/storing';
 
 const oss = new AliOSS({
   region: 'oss-cn-nanjing',
