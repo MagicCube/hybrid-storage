@@ -88,7 +88,7 @@ export class HybridStorage implements AsyncStorage {
   }
 
   /**
-   * 发起本地与远程之间的同步。
+   * 发起本地与远端之间的同步。
    */
   async synchronize() {
     if (this._syncState === SyncState.Synchronizing) {

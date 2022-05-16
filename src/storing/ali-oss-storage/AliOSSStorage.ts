@@ -43,7 +43,7 @@ export class AliOSSStorage implements AsyncStorage {
         // 即文件路径不存在，则返回默认值
         return defaultValue;
       } else {
-        // 其他的异常照样抛出
+        // 其他的异常则原封未动的抛出
         throw e;
       }
     }

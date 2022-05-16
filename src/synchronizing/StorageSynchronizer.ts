@@ -11,7 +11,7 @@ export class StorageSynchronizer {
   private _commitQueue: AsyncQueue<SyncCommit>;
 
   /**
-   * 根据指定的本地与远程存储器创建同步器 `StorageSynchronizer` 类的新实例。
+   * 根据指定的本地与远端存储器创建同步器 `StorageSynchronizer` 类的新实例。
    */
   constructor(
     readonly localStorage: AsyncStorage & {
@@ -37,7 +37,7 @@ export class StorageSynchronizer {
   }
 
   /**
-   * 将远程存储器的数据变更（如果有）拉到本地存储器。
+   * 将远端存储器的数据变更（如果有）拉到本地存储器。
    */
   async pull() {
     logger.beginGroup('Pulling');
@@ -52,7 +52,7 @@ export class StorageSynchronizer {
   }
 
   /**
-   * 尝试将变更队列中的数据推送到远程存储器。
+   * 尝试将变更队列中的数据推送到远端存储器。
    */
   async push() {
     logger.beginGroup('Pushing');
@@ -61,7 +61,7 @@ export class StorageSynchronizer {
   }
 
   /**
-   * 发起本地与远程之间的同步。
+   * 发起本地与远端之间的同步。
    *
    * 此方法先将调用 `pull()` 从云端更新数据到本地，然后再调用 `push()` 将本地的变更推送到云端。
    */
@@ -109,7 +109,7 @@ export class StorageSynchronizer {
   ): SyncCommit[] {
     const patches: SyncCommit[] = [];
 
-    // 查找远程存储器中已经不存在的项及更改过的项。
+    // 查找远端存储器中已经不存在的项及更改过的项。
     for (const [key, value] of Object.entries(local)) {
       if (!remote[key]) {
         patches.push({
