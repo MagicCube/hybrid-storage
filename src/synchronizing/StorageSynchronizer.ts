@@ -1,35 +1,36 @@
+import { AsyncQueue } from '@/queuing';
 import type { AsyncStorage, StorageMetaIndex } from '@/storing';
 
-import type { SyncOperation } from './SyncOperation';
+import type { SyncCommit } from './SyncCommit';
 
 /**
  * 表示存储同步器的类，用于在本地及云端存储器之间进行数据同步。
  */
 export class StorageSynchronizer {
-  private _changes: SyncOperation[] = [];
+  private _commitQueue: AsyncQueue<SyncCommit>;
 
   /**
    * 根据指定的本地与远程存储器创建同步器 `StorageSynchronizer` 类的新实例。
    */
   constructor(
-    readonly localStorage: AsyncStorage,
+    readonly localStorage: AsyncStorage & {
+      getItemSync: Unpromisify<AsyncStorage['getItem']>;
+    },
     readonly remoteStorage: AsyncStorage,
   ) {
-    this.localStorage.getItem('@changes', []).then((changes) => {
-      this._changes = (changes as unknown as SyncOperation[]) || [];
-    });
+    this._commitQueue = new AsyncQueue<SyncCommit>(
+      localStorage,
+      this._handleQueuedCommit,
+    );
   }
 
   /**
    * 将指定的本地变更提交到变更队列，并尝试立刻执行 `push()` 方法推送至服务端。
-   * @param change 需要提交的本地变更。
+   * @param commit 需要提交的本地变更。
    * @param autoPushAfterCommit 指定是否在提交后立即调用 `push()` 方法推送本地变更至服务器。默认为 `true`。
    */
-  async commitChange(change: SyncOperation, autoPushAfterCommit = true) {
-    this._changes.push(change);
-    if (autoPushAfterCommit) {
-      this.push(); // 无需等待结果
-    }
+  async commitChange(commit: SyncCommit, autoPushAfterCommit = true) {
+    await this._commitQueue.enqueue(commit, autoPushAfterCommit);
   }
 
   /**
@@ -38,19 +39,15 @@ export class StorageSynchronizer {
   async pull() {
     const remoteIndex = await this.remoteStorage.getMetaIndex();
     const localIndex = await this.localStorage.getMetaIndex();
-    const patches = this._generatePatches(localIndex, remoteIndex);
-    this._applyOperations(patches);
+    const commits = this._generatePatches(localIndex, remoteIndex);
+    this._applyCommits(commits);
   }
 
   /**
    * 尝试将变更队列中的数据推送到远程存储器。
    */
   async push() {
-    while (this._changes.length) {
-      const operation = this._changes[0];
-      await this._applyOperation(operation);
-      this._changes.shift();
-    }
+    await this._commitQueue.run();
   }
 
   /**
@@ -63,47 +60,47 @@ export class StorageSynchronizer {
     await this.push();
   }
 
-  private async _applyOperation(operation: SyncOperation) {
+  private async _applyCommit(commit: SyncCommit) {
     const sourceStorage =
-      operation.target === 'remote' ? this.localStorage : this.remoteStorage;
+      commit.target === 'remote' ? this.localStorage : this.remoteStorage;
     const targetStorage =
-      operation.target === 'local' ? this.localStorage : this.remoteStorage;
-    switch (operation.type) {
+      commit.target === 'local' ? this.localStorage : this.remoteStorage;
+    switch (commit.type) {
       case 'remove':
-        await targetStorage.removeItem(operation.key);
+        await targetStorage.removeItem(commit.key);
         break;
       case 'update':
-        const value = await sourceStorage.getItem(operation.key);
+        const value = await sourceStorage.getItem(commit.key);
         if (value) {
-          await targetStorage.setItem(operation.key, value);
+          await targetStorage.setItem(commit.key, value);
         }
         break;
     }
   }
 
-  private async _applyOperations(operations: SyncOperation[]) {
-    for (const operation of operations) {
-      this._applyOperation(operation);
+  private async _applyCommits(commits: SyncCommit[]) {
+    for (const commit of commits) {
+      await this._applyCommit(commit);
     }
   }
 
   private _generatePatches(
     local: StorageMetaIndex,
     remote: StorageMetaIndex,
-  ): SyncOperation[] {
-    const operations: SyncOperation[] = [];
+  ): SyncCommit[] {
+    const patches: SyncCommit[] = [];
 
     // 查找远程存储器中已经不存在的项及更改过的项。
     for (const [key, value] of Object.entries(local)) {
       if (!remote[key]) {
-        operations.push({
+        patches.push({
           target: 'local',
           type: 'remove',
           key,
         });
       } else if (remote[key].etag !== value.etag) {
         console.info(remote[key].etag, value.etag);
-        operations.push({
+        patches.push({
           target: 'local',
           type: 'update',
           key,
@@ -114,13 +111,17 @@ export class StorageSynchronizer {
     // 查找新增的项。
     for (const key of Object.keys(remote)) {
       if (!local[key]) {
-        operations.push({
+        patches.push({
           target: 'local',
           type: 'update',
           key,
         });
       }
     }
-    return operations;
+    return patches;
   }
+
+  private _handleQueuedCommit = async (commit: SyncCommit) => {
+    await this._applyCommit(commit);
+  };
 }

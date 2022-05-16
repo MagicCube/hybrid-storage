@@ -1,5 +1,5 @@
 import type { Serializable } from '@/serializing';
-import type { AsyncLocalStorage } from '@/storing';
+import type { AsyncStorage } from '@/storing';
 
 /**
  * 表示一个接受异步回调的队列。
@@ -18,17 +18,15 @@ export class AsyncQueue<T extends Serializable> {
    * @param autoRun 指定是否在创建实例后立即开始执行队列。
    */
   constructor(
-    private readonly _localStorage: AsyncLocalStorage,
+    private readonly _localStorage: AsyncStorage & {
+      getItemSync: Unpromisify<AsyncStorage['getItem']>;
+    },
     private readonly _callback: (task: T) => Promise<void>,
     private readonly _errorCallback?:
       | ((task: T, error: Error) => Promise<void>)
       | null,
-    autoRun = true,
   ) {
-    this._internal = this._localStorage.getItemSync('@changes', []);
-    if (autoRun) {
-      this._run();
-    }
+    this._internal = this._localStorage.getItemSync('@changes', []) as T[];
   }
 
   /**
@@ -62,11 +60,14 @@ export class AsyncQueue<T extends Serializable> {
   /**
    * 将指定的任务项添加到队列的末尾。
    * @param task 指定的任务项。
+   * @param autoRunAfterEnqueue 指定是否在添加任务项后立即执行队列。
    */
-  async enqueue(task: T) {
+  async enqueue(task: T, autoRunAfterEnqueue = true) {
     this._internal.push(task);
     await this._save();
-    this._run(); // 无需等待，因为 _run() 实际是在 requestIdleCallback() 中被调用
+    if (autoRunAfterEnqueue) {
+      this.run(); // 无需等待，因为 _run() 实际是在 requestIdleCallback() 中被调用
+    }
   }
 
   /**
@@ -77,35 +78,40 @@ export class AsyncQueue<T extends Serializable> {
     await this._save();
   }
 
-  private _run() {
+  /**
+   * 尝试在较空闲时，执行下一个任务项（如果存在）直到对列为空。
+   */
+  async run(): Promise<void> {
     if (this._isRunning || this.isEmpty) return;
 
     this._isRunning = true;
-    requestIdleCallback(async (deadline: IdleDeadline) => {
-      if (deadline.didTimeout) {
-        this._isRunning = false;
-        this._run();
-        return;
-      }
-      if (!this.isEmpty) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const task = this.peak!;
-        try {
-          await this._callback(task);
-        } catch (e) {
+    return new Promise((resolve) => {
+      requestIdleCallback(async (deadline: IdleDeadline) => {
+        if (deadline.didTimeout) {
           this._isRunning = false;
-          if (this._errorCallback) {
-            await this._errorCallback(task, e as Error);
-          }
-          throw e;
+          resolve(this.run());
+          return;
         }
-        this.dequeue();
-      }
-      this._isRunning = false;
+        if (!this.isEmpty) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          const task = this.peak!;
+          try {
+            await this._callback(task);
+          } catch (e) {
+            this._isRunning = false;
+            if (this._errorCallback) {
+              await this._errorCallback(task, e as Error);
+            }
+            throw e;
+          }
+          this.dequeue();
+        }
+        this._isRunning = false;
 
-      if (!this.isEmpty) {
-        this._run();
-      }
+        if (!this.isEmpty) {
+          await this.run();
+        }
+      });
     });
   }
 
