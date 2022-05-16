@@ -6,4 +6,4 @@ A solution for synchronizing JSON objects between offline and cloud.
 
 ## Documents
 
-[Chinese](./docs/index.md)
+[中文文档 Chinese Documents](./docs/index.md)
