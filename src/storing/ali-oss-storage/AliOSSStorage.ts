@@ -2,6 +2,7 @@ import type OSS from 'ali-oss';
 
 import type { Serializable, Serializer } from '@/serializing';
 import { JSONSerializer } from '@/serializing';
+import { dropQuotes } from '@/util/quote-string';
 
 import type { AsyncStorage } from '../AsyncStorage';
 import type { StorageMetaIndex } from '../StorageMetaIndex';
@@ -100,8 +101,4 @@ export class AliOSSStorage implements AsyncStorage {
       .substring(this.instanceName.length + 1)
       .replace(/\.json$/, '');
   }
-}
-
-function dropQuotes(etagWithQuotes: string) {
-  return etagWithQuotes.replace(/"/g, '');
 }
