@@ -1,8 +1,8 @@
 import type { Serializable } from '@/serializing';
-import type { StorageMetaIndex } from '@/types';
 import { hash } from '@/util/hash';
 
 import type { AsyncStorage } from '../AsyncStorage';
+import type { StorageMetaIndex } from '../StorageMetaIndex';
 
 /**
  * 为浏览器内置的 `LocalStorage` 实现的异步存储器类。

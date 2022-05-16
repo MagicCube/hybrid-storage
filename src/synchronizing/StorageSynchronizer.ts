@@ -1,5 +1,6 @@
-import type { AsyncStorage } from '@/storages';
-import type { StorageMetaIndex, SyncOperation } from '@/types';
+import type { AsyncStorage, StorageMetaIndex } from '@/storages';
+
+import type { SyncOperation } from './SyncOperation';
 
 /**
  * 表示存储同步器的类，用于在本地及云端存储器之间进行数据同步。
