@@ -93,6 +93,7 @@ export class HybridStorage implements AsyncStorage {
   async synchronize() {
     if (this._syncState === SyncState.Synchronizing) {
       console.warn('Synchronizing is already in progress.');
+      return;
     }
     this._syncState = SyncState.Synchronizing;
     try {
