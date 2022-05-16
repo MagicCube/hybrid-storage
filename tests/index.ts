@@ -1,5 +1,8 @@
 import { AliOSS, AsyncLocalStorage, HybridStorage } from '@/index';
+import { logger } from '@/logging';
 import { AliOSSStorage } from '@/storing';
+
+logger.enabled = true;
 
 const oss = new AliOSS({
   region: 'oss-cn-nanjing',

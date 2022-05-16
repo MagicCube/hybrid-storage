@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 class Logger {
+  enabled = false;
+
   info(message: string, ...args: any[]) {
+    if (!this.enabled) {
+      return;
+    }
     console.info(
       ['%c', formatTime(new Date()), '%c ', message].join(''),
       'color: gray',
@@ -11,6 +16,9 @@ class Logger {
   }
 
   warn(message: string, ...args: any[]) {
+    if (!this.enabled) {
+      return;
+    }
     console.warn(
       ['%c', formatTime(new Date()), '%c ', message].join(''),
       'color: orange',
@@ -20,10 +28,16 @@ class Logger {
   }
 
   beginGroup(groupName: string) {
+    if (!this.enabled) {
+      return;
+    }
     console.group(groupName);
   }
 
   endGroup(message?: string) {
+    if (!this.enabled) {
+      return;
+    }
     if (message) {
       this.info(message);
     }
