@@ -1,5 +1,5 @@
 import type { Serializable } from '@/serializing';
-import type { AsyncStorage } from '@/storing';
+import { AsyncLocalStorage } from '@/storing';
 
 /**
  * 表示一个接受异步回调的队列。
@@ -7,26 +7,26 @@ import type { AsyncStorage } from '@/storing';
  * 该队列支持当某一个任务项失败后离线存储，并在有条件时重试。
  */
 export class AsyncQueue<T extends Serializable> {
-  private _internal: T[] = [];
   private _isRunning = false;
+  private _internal: T[] = [];
+  private _localStorage: AsyncLocalStorage;
 
   /**
    * 创建 `AsyncQueue` 类的新实例。
-   * @param _localStorage 指定的本地存储实例。
+   * @param instanceName 指定存储实例的名称。
    * @param _callback 一个回调函数，用于异步处理队列中的每一个任务项。
    * @param _errorCallback 一个回调函数，用于异步处理任务执行的错误。
    * @param autoRun 指定是否在创建实例后立即开始执行队列。
    */
   constructor(
-    private readonly _localStorage: AsyncStorage & {
-      getItemSync: Unpromisify<AsyncStorage['getItem']>;
-    },
+    readonly instanceName: string,
     private readonly _callback: (task: T) => Promise<void>,
     private readonly _errorCallback?:
       | ((task: T, error: Error) => Promise<void>)
       | null,
   ) {
-    this._internal = this._localStorage.getItemSync('@changes', []) as T[];
+    this._localStorage = new AsyncLocalStorage(`@queue/${instanceName}`);
+    this._internal = this._localStorage.getItemSync('tasks', []) as T[];
   }
 
   /**
@@ -85,7 +85,7 @@ export class AsyncQueue<T extends Serializable> {
     if (this._isRunning || this.isEmpty) return;
 
     this._isRunning = true;
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       requestIdleCallback(async (deadline: IdleDeadline) => {
         if (deadline.didTimeout) {
           this._isRunning = false;
@@ -102,20 +102,23 @@ export class AsyncQueue<T extends Serializable> {
             if (this._errorCallback) {
               await this._errorCallback(task, e as Error);
             }
-            throw e;
+            reject(e);
+            return;
           }
-          this.dequeue();
+          await this.dequeue();
         }
         this._isRunning = false;
 
         if (!this.isEmpty) {
           await this.run();
         }
+
+        resolve();
       });
     });
   }
 
   private async _save() {
-    await this._localStorage.setItem('@changes', this._internal);
+    await this._localStorage.setItem('tasks', this._internal);
   }
 }

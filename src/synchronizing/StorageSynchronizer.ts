@@ -18,9 +18,11 @@ export class StorageSynchronizer {
     },
     readonly remoteStorage: AsyncStorage,
   ) {
+    const instanceName = this.localStorage.instanceName;
     this._commitQueue = new AsyncQueue<SyncCommit>(
-      localStorage,
+      instanceName,
       this._handleQueuedCommit,
+      this._handleQueuedCommitError,
     );
   }
 
@@ -37,17 +39,26 @@ export class StorageSynchronizer {
    * 将远程存储器的数据变更（如果有）拉到本地存储器。
    */
   async pull() {
+    console.group('Pulling');
+    console.info('Downloading meta index from remote...');
     const remoteIndex = await this.remoteStorage.getMetaIndex();
     const localIndex = await this.localStorage.getMetaIndex();
-    const commits = this._generatePatches(localIndex, remoteIndex);
-    await this._applyCommits(commits);
+    console.info('Comparing...');
+    const patches = this._generatePatches(localIndex, remoteIndex);
+    console.info('Apply patches...', patches);
+    await this._applyCommits(patches);
+    console.info('Done pulling');
+    console.groupEnd();
   }
 
   /**
    * 尝试将变更队列中的数据推送到远程存储器。
    */
   async push() {
+    console.group('Pushing');
     await this._commitQueue.run();
+    console.info('Done pushing');
+    console.groupEnd();
   }
 
   /**
@@ -56,24 +67,34 @@ export class StorageSynchronizer {
    * 此方法先将调用 `pull()` 从云端更新数据到本地，然后再调用 `push()` 将本地的变更推送到云端。
    */
   async synchronize() {
+    console.group('Synchronizing');
     await this.pull();
     await this.push();
+    console.info('Done synchronizing');
+    console.groupEnd();
   }
 
   private async _applyCommit(commit: SyncCommit) {
+    console.info('Committing', commit);
+
     const sourceStorage =
       commit.target === 'remote' ? this.localStorage : this.remoteStorage;
     const targetStorage =
       commit.target === 'local' ? this.localStorage : this.remoteStorage;
     switch (commit.type) {
-      case 'remove':
-        await targetStorage.removeItem(commit.key);
+      case 'set':
+        await sourceStorage.setItem(commit.key, commit.value);
+        await targetStorage.setItem(commit.key, commit.value);
         break;
       case 'update':
         const value = await sourceStorage.getItem(commit.key);
         if (value) {
           await targetStorage.setItem(commit.key, value);
         }
+        break;
+      case 'remove':
+        await targetStorage.removeItem(commit.key);
+        await sourceStorage.removeItem(commit.key);
         break;
     }
   }
@@ -97,13 +118,16 @@ export class StorageSynchronizer {
           target: 'local',
           type: 'remove',
           key,
+          reason: 'remote-removed',
+          staging: 'patching',
         });
       } else if (remote[key].etag !== value.etag) {
-        console.info(remote[key].etag, value.etag);
         patches.push({
           target: 'local',
           type: 'update',
           key,
+          reason: 'remote-updated',
+          staging: 'patching',
         });
       }
     }
@@ -115,6 +139,8 @@ export class StorageSynchronizer {
           target: 'local',
           type: 'update',
           key,
+          reason: 'remote-added',
+          staging: 'patching',
         });
       }
     }
@@ -123,5 +149,12 @@ export class StorageSynchronizer {
 
   private _handleQueuedCommit = async (commit: SyncCommit) => {
     await this._applyCommit(commit);
+  };
+
+  private _handleQueuedCommitError = async (
+    commit: SyncCommit,
+    error: Error,
+  ) => {
+    console.warn(`Failed to commit`, commit, error);
   };
 }

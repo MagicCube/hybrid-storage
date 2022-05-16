@@ -4,6 +4,13 @@ export interface BaseSyncCommit<T extends string> {
   type: T;
   target: 'local' | 'remote';
   key: string;
+  reason:
+    | 'local-updated'
+    | 'local-removed'
+    | 'remote-added'
+    | 'remote-updated'
+    | 'remote-removed';
+  staging: 'queued' | 'patching';
   [key: string]: Serializable;
 }
 
