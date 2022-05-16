@@ -49,9 +49,9 @@ export class AliOSSStorage implements AsyncStorage {
       throw new Error('Undefined value is not allowed.');
     }
     const jsonString = this._serializer.serialize(value);
-    const buffer = new Blob([jsonString], { type: 'application/json' });
+    const blob = new Blob([jsonString], { type: 'application/json' });
     const fileName = this._getFileName(key);
-    const result = await this.oss.put(fileName, buffer);
+    const result = await this.oss.put(fileName, blob);
     const { etag: etagWithDoubleQuotes } = result.res.headers as {
       etag: string;
     };
