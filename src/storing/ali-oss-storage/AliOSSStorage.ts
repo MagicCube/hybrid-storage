@@ -98,11 +98,11 @@ export class AliOSSStorage implements AsyncStorage {
     await this.oss.delete(fileName);
   }
 
-  _getFileName(key: string): string {
+  private _getFileName(key: string): string {
     return `${this.instanceName}/${key}.json`;
   }
 
-  _getKeyFromFileName(fileName: string) {
+  private _getKeyFromFileName(fileName: string) {
     return fileName
       .substring(this.instanceName.length + 1)
       .replace(/\.json$/, '');
