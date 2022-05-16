@@ -91,6 +91,9 @@ export class HybridStorage implements AsyncStorage {
    * 发起本地与远程之间的同步。
    */
   async synchronize() {
+    if (this._syncState === SyncState.Synchronizing) {
+      console.warn('Synchronizing is already in progress.');
+    }
     this._syncState = SyncState.Synchronizing;
     try {
       await this._synchronizer.synchronize();
