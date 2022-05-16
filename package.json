@@ -1,0 +1,29 @@
+{
+  "name": "hybrid-storage",
+  "version": "1.0.0",
+  "description": "A solution for synchronizing JSON objects between offline and cloud.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/ali-oss": "^6.16.3",
+    "@typescript-eslint/eslint-plugin": "^5.23.0",
+    "@typescript-eslint/parser": "^5.23.0",
+    "eslint": "^8.15.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "^2.6.2",
+    "typescript": "^4.6.4",
+    "vite": "^2.9.9",
+    "vite-tsconfig-paths": "^3.4.1"
+  },
+  "dependencies": {
+    "@types/md5": "^2.3.2",
+    "ali-oss": "^6.17.1",
+    "md5": "^2.3.0"
+  }
+}
