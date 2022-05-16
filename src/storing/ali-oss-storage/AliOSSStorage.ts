@@ -44,6 +44,9 @@ export class AliOSSStorage implements AsyncStorage {
    * @inheritdoc
    */
   async setItem(key: string, value: Serializable): Promise<string> {
+    if (value === undefined) {
+      throw new Error('Undefined value is not allowed.');
+    }
     const jsonString = this._serializer.serialize(value);
     const buffer = new Blob([jsonString], { type: 'application/json' });
     const fileName = this._getFileName(key);

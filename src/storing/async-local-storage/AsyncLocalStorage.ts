@@ -54,6 +54,9 @@ export class AsyncLocalStorage implements AsyncStorage {
    * @inheritdoc
    */
   async setItem(key: string, value: Serializable) {
+    if (value === undefined) {
+      throw new Error('Undefined value is not allowed.');
+    }
     return this._setItem(key, value, true);
   }
 
