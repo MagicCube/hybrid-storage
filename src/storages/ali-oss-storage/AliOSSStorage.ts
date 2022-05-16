@@ -1,6 +1,8 @@
 import type OSS from 'ali-oss';
 
-import type { AsyncStorage, StorageMetaIndex, Serializable } from '@/core';
+import type { Serializable, StorageMetaIndex } from '@/types';
+
+import type { AsyncStorage } from '../AsyncStorage';
 
 /**
  * 为阿里云 OSS 存储服务实现的异步存储器类。

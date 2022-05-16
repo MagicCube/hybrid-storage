@@ -1,6 +1,6 @@
 import type { AsyncLocalStorage } from '@/storages';
 
-import type { Serializable } from '../types';
+import type { Serializable } from '@/types';
 
 /**
  * 表示一个接受异步回调的队列。

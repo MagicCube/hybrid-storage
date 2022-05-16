@@ -1,4 +1,4 @@
-import type { StorageMetaIndex, Serializable } from './types';
+import type { StorageMetaIndex, Serializable } from '@/types';
 
 /**
  * 表示异步存储器的接口。
