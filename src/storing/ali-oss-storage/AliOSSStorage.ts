@@ -1,6 +1,7 @@
 import type OSS from 'ali-oss';
 
 import type { Serializable } from '@/serializing';
+import { JSONSerializer } from '@/serializing';
 
 import type { AsyncStorage } from '../AsyncStorage';
 import type { StorageMetaIndex } from '../StorageMetaIndex';
@@ -12,6 +13,8 @@ import type { StorageMetaIndex } from '../StorageMetaIndex';
  * 该类实现了 {@link AsyncStorage} 接口。
  */
 export class AliOSSStorage implements AsyncStorage {
+  private _serializer = new JSONSerializer();
+
   /**
    * 创建 `AliOSSStorage` 类的新实例。
    * @param instanceName 指定存储器的实例名称。
@@ -30,7 +33,7 @@ export class AliOSSStorage implements AsyncStorage {
       const fileName = this._getFileName(key);
       const { content } = await this.oss.get(fileName);
       const jsonString = content.toString();
-      const result = JSON.parse(jsonString);
+      const result = this._serializer.deserialize(jsonString);
       return result;
     } catch (e) {
       return defaultValue;
@@ -41,7 +44,7 @@ export class AliOSSStorage implements AsyncStorage {
    * @inheritdoc
    */
   async setItem(key: string, value: Serializable): Promise<string> {
-    const jsonString = JSON.stringify(value);
+    const jsonString = this._serializer.serialize(value);
     const buffer = new Blob([jsonString], { type: 'application/json' });
     const fileName = this._getFileName(key);
     const result = await this.oss.put(fileName, buffer);

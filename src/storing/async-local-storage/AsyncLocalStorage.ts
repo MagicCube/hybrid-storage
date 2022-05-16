@@ -1,4 +1,5 @@
 import type { Serializable } from '@/serializing';
+import { JSONSerializer } from '@/serializing';
 import { hash } from '@/util/hash';
 
 import type { AsyncStorage } from '../AsyncStorage';
@@ -11,6 +12,7 @@ import type { StorageMetaIndex } from '../StorageMetaIndex';
  * 该类实现了 {@link AsyncStorage} 接口。
  */
 export class AsyncLocalStorage implements AsyncStorage {
+  private _serializer = new JSONSerializer();
   private _storage: Storage;
 
   /**
@@ -45,7 +47,7 @@ export class AsyncLocalStorage implements AsyncStorage {
       return defaultValue;
     }
 
-    return JSON.parse(value);
+    return this._serializer.deserialize(value);
   }
 
   /**
@@ -91,7 +93,7 @@ export class AsyncLocalStorage implements AsyncStorage {
     value: Serializable,
     updateIndex: boolean,
   ) {
-    const jsonString = JSON.stringify(value);
+    const jsonString = this._serializer.serialize(value);
     this._storage.setItem(this._getUniqueKey(key), jsonString);
     // Compute hash
     const etag = hash(jsonString);
