@@ -1,6 +1,7 @@
 import type OSS from 'ali-oss';
 
-import type { Serializable, StorageMetaIndex } from '@/types';
+import type { Serializable } from '@/serializing';
+import type { StorageMetaIndex } from '@/types';
 
 import type { AsyncStorage } from '../AsyncStorage';
 

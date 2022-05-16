@@ -1,8 +1,8 @@
 import type OSS from 'ali-oss';
 
+import type { Serializable } from '@/serializing';
 import { AliOSSStorage, AsyncLocalStorage } from './storages';
 import { StorageSynchronizer } from './synchronizing';
-import type { Serializable } from './types';
 import { SyncState } from './types';
 
 /**

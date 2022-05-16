@@ -1,4 +1,5 @@
-import type { Serializable, StorageMetaIndex } from '@/types';
+import type { Serializable } from '@/serializing';
+import type { StorageMetaIndex } from '@/types';
 import { hash } from '@/util/hash';
 
 import type { AsyncStorage } from '../AsyncStorage';

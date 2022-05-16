@@ -1,4 +1,4 @@
-import type { Serializable } from './Serializable';
+import type { Serializable } from '../serializing';
 
 export interface BaseSyncOperation<T extends string> {
   type: T;
