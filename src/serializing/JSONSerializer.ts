@@ -1,9 +1,10 @@
 import type { Serializable } from './Serializable';
+import type { Serializer } from './Serializer';
 
 /**
  * 表示 JSON 序列化器的类。
  */
-export class JSONSerializer {
+export class JSONSerializer implements Serializer {
   /**
    * 将指定的值序列化为 JSON 字符串。
    * @param value 指定要被序列化的值。

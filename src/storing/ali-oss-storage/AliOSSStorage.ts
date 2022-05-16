@@ -1,6 +1,6 @@
 import type OSS from 'ali-oss';
 
-import type { Serializable } from '@/serializing';
+import type { Serializable, Serializer } from '@/serializing';
 import { JSONSerializer } from '@/serializing';
 
 import type { AsyncStorage } from '../AsyncStorage';
@@ -13,7 +13,7 @@ import type { StorageMetaIndex } from '../StorageMetaIndex';
  * 该类实现了 {@link AsyncStorage} 接口。
  */
 export class AliOSSStorage implements AsyncStorage {
-  private _serializer = new JSONSerializer();
+  private _serializer: Serializer = new JSONSerializer();
 
   /**
    * 创建 `AliOSSStorage` 类的新实例。
