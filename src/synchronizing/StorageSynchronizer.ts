@@ -1,3 +1,4 @@
+import { logger } from '@/logging';
 import { AsyncQueue } from '@/queuing';
 import type { AsyncStorage, StorageMetaIndex } from '@/storing';
 
@@ -39,26 +40,24 @@ export class StorageSynchronizer {
    * 将远程存储器的数据变更（如果有）拉到本地存储器。
    */
   async pull() {
-    console.group('Pulling');
-    console.info('Downloading meta index from remote...');
+    logger.beginGroup('Pulling');
+    logger.info('Downloading meta index from remote...');
     const remoteIndex = await this.remoteStorage.getMetaIndex();
     const localIndex = await this.localStorage.getMetaIndex();
-    console.info('Comparing...');
+    logger.info('Comparing...');
     const patches = this._generatePatches(localIndex, remoteIndex);
-    console.info('Apply patches...', patches);
+    logger.info('Apply patches...', patches);
     await this._applyCommits(patches);
-    console.info('Done pulling');
-    console.groupEnd();
+    logger.endGroup('Done pulling');
   }
 
   /**
    * 尝试将变更队列中的数据推送到远程存储器。
    */
   async push() {
-    console.group('Pushing');
+    logger.beginGroup('Pushing');
     await this._commitQueue.run();
-    console.info('Done pushing');
-    console.groupEnd();
+    logger.endGroup('Done pushing');
   }
 
   /**
@@ -67,15 +66,14 @@ export class StorageSynchronizer {
    * 此方法先将调用 `pull()` 从云端更新数据到本地，然后再调用 `push()` 将本地的变更推送到云端。
    */
   async synchronize() {
-    console.group('Synchronizing');
+    logger.beginGroup('Synchronizing');
     await this.pull();
     await this.push();
-    console.info('Done synchronizing');
-    console.groupEnd();
+    logger.endGroup('Done synchronizing');
   }
 
   private async _applyCommit(commit: SyncCommit) {
-    console.info('Committing', commit);
+    logger.info('Committing', commit);
 
     const sourceStorage =
       commit.target === 'remote' ? this.localStorage : this.remoteStorage;
@@ -155,6 +153,6 @@ export class StorageSynchronizer {
     commit: SyncCommit,
     error: Error,
   ) => {
-    console.warn(`Failed to commit`, commit, error);
+    logger.warn(`Failed to commit`, commit, error);
   };
 }
