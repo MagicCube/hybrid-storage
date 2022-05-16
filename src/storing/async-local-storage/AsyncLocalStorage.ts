@@ -64,7 +64,7 @@ export class AsyncLocalStorage implements AsyncStorage {
    * @inheritdoc
    */
   async getMetaIndex(): Promise<StorageMetaIndex> {
-    const metaIndex = this.getItem('@meta') as unknown as StorageMetaIndex;
+    const metaIndex = this.getItem('@meta', {}) as unknown as StorageMetaIndex;
     return metaIndex;
   }
 
