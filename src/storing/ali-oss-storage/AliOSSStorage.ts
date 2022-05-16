@@ -30,15 +30,21 @@ export class AliOSSStorage implements AsyncStorage {
     key: string,
     defaultValue: Maybe<Serializable> = undefined,
   ): Promise<Maybe<Serializable>> {
+    let jsonString: string;
     try {
       const fileName = this._getFileName(key);
       const { content } = await this.oss.get(fileName);
-      const jsonString = content.toString();
-      const result = this._serializer.deserialize(jsonString);
-      return result;
+      jsonString = content.toString();
     } catch (e) {
-      return defaultValue;
+      if (e instanceof Error && e.name === 'NoSuchKeyError') {
+        // File not found
+        return defaultValue;
+      } else {
+        throw e;
+      }
     }
+    const result = this._serializer.deserialize(jsonString);
+    return result;
   }
 
   /**
