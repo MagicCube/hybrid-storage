@@ -4,19 +4,34 @@
 
 相信有不少前端同学在做实验性项目或私有项目的时候，都遇到过这样的需求：
 
+![intro](images/intro.png)
+
 * 有相对较小的键值对数据据需要存储在本地的 `LocalStorage` 或 `IndexedDB` 里，包括设置项、小体积实例数据等
-
-* 需要将上述数据与云端进行同步，同时又能保证离线的情况下也能够使用
-
+* 需要将上述数据与云端进行同步，同时又能保证离线的情况下也能够使用，特别适用于 Electron 和移动端应用
 * 国内访问速度要极快
-
 * 具有一定的安全私密性
-
 * 没有服务器资源，自己不想写任何一行服务端代码
-
 * **一定要是免费的！**
 
-笔者最近用阿里云的[**对象存储云存储服务**](https://www.aliyun.com/product/oss)（Object Storage Service，下简称为 **OSS**）搭建了一套纯前端实现的 JSON 云存储解决方案。最关键的是，如果你是阿里云新用户，可以免费使用头 3 个月，并且第一年的成本[只有区区 9 块钱](https://common-buy.aliyun.com/?spm=5176.7933691.J_1309840.2.2e394c59sCe8zx&commodityCode=ossbag#/buy?request=%7B%22region%22:%22china-common%22,%20%22ossbag_type%22:%22storage_std_zrs%22,%20%22std_zrs_storage_bag_spec%22:%221024%22,%20%22ord_time%22:%221:Year%22%7D)，但却有多达 40GB 的空间！
+
+
+```typescript
+// 创建一个 HybridStorage 存储器，需要传入 OSS 客户端对象。
+const storage = new HybridStorage('my-example', oss);
+
+// 设置键值对，自动双写本地与云端
+await storage.setItem('theme', { name: 'light', primaryColor: '#38e79a' });
+await storage.setItem('city', { name: 'Hangzhou', provinceName: 'Zhejiang' });
+await storage.removeItem('province');
+
+// 根据键获取值对象
+const city = await storage.getItem('city');
+
+// 当离线数据与云端不一致时，亦可以手工发起与云端同步
+await storage.synchronize();
+```
+
+如上所示，笔者最近用阿里云的[**对象存储云存储服务**](https://www.aliyun.com/product/oss)（Object Storage Service，下简称为 **OSS**）搭建了一套纯前端实现的 JSON 云存储解决方案，命名为 HybridStorage。如果你是阿里云新用户，可以免费使用 3 个月 100GB 的存储，并且第一年的成本[只有区区 9 块钱](https://common-buy.aliyun.com/?spm=5176.7933691.J_1309840.2.2e394c59sCe8zx&commodityCode=ossbag#/buy?request=%7B%22region%22:%22china-common%22,%20%22ossbag_type%22:%22storage_std_zrs%22,%20%22std_zrs_storage_bag_spec%22:%221024%22,%20%22ord_time%22:%221:Year%22%7D)，但却有多达 40GB 的空间！
 
 本文就将详细阐述笔者如何实现这样一个解决方案的，其中包含：
 
@@ -41,15 +56,15 @@
 
 ### 2.1 OSS 简介
 
-> 阿里云对象存储OSS（Object Storage Service）是一款海量、安全、低成本、高可靠的云存储服务，提供99.9999999999%(12个9)的数据持久性，99.995%的数据可用性。多种存储类型供选择，全面优化存储成本。
+[![ali-oss-what-is](/Users/henry/workspaces/magiccube/hybrid-storage/docs/images/ali-oss-what-is.png)](https://www.aliyun.com/product/oss)
 
-以上是阿里云在[官网](https://www.aliyun.com/product/oss)上的介绍。对于前端来说，我们可以简单的将 OSS 理解成是一种
+这是阿里云在[官网](https://www.aliyun.com/product/oss)上的介绍。对于前端来说，我们可以简单的将 OSS 理解成是一种
 
-* 文件存储服务
-* 云端存储，无需架设服务器
-* 超级廉价
-* 超级稳定
-* 全球范围读写速度极快
+* **文件存储服务**
+* **云端存储，无需架设服务器**
+* **超级廉价**
+* **超级稳定**
+* **全球范围读写速度极快**
 
 平时我们最常使用的 CDN 文件就是基于 OSS 进行存储和暴露的。
 
@@ -61,7 +76,7 @@
 
 免费开通 3 个月的阿里云 OSS 服务非常简单，你只需要：
 
-1. 首先通过支付宝身份[注册成为阿里云的实名认证个人用户](https://account.aliyun.com/register/qr_register.htm)。
+1. 如果你还不是阿里云的用户，可以通过支付宝身份[注册成为阿里云的实名认证个人用户](https://account.aliyun.com/register/qr_register.htm)。
 
 2. 如果你是新人，可在 [新人试用中心](https://free.aliyun.com/)首页的搜索框中搜索“OSS”，即可开通新人礼包；或者你也可以[在这里](https://common-buy.aliyun.com/?commodityCode=ossbag#/buy)根据自己的需要，开通超低折扣的套餐。
 
@@ -129,13 +144,15 @@ console.info(etag);
 
 根据上述需求，我设计了这样的一个方案：
 
+![hybrid-storage-arch](/Users/henry/workspaces/magiccube/hybrid-storage/docs/images/hybrid-storage-arch.png)
+
 * 用本地的 LocalStorage 和云端的 OSS 文件同时存储 JSON 键值对数据
-* 键值对数据通过序列化以 JSON 字符串的形式进行传输及存储
-* 定义一个 **`AsyncStorage` 通用接口**，分别针对本地存储器（**`AsyncLocalStorage` 类**）和 OSS 存储器（**`AliOSSStorage` 类**）对该接口进行各自实现，从而以无差异的方式访问 LocalStorage 和 OSS 服务。
+* 在**序列化层（Serializing）**，键值对数据通过序列化以 JSON 字符串的形式进行传输及存储
+* 在**存储层（Storing）**，先定义一个 **`AsyncStorage` 通用接口**，分别针对本地存储器（**`AsyncLocalStorage` 类**）和 OSS 存储器（**`AliOSSStorage` 类**）对该接口进行各自实现，从而以无差异的方式访问 LocalStorage 和 OSS 服务。
   * `AsyncLocalStorage` 类 直接通过 `LocalStorage` 中的键值对进行存储。
   * 而在 `AliOSSStorage` 类中，键是 OSS 云端文件的名称（包含路径），值则作为内容存储在文件中。
 * 读操作默认走本地的 `LocalStorage`，写操作则是先写本地，然后再以异步操作队列（**`AsyncQueue` 类**）同步至服务端。
-  * 数据同步的逻辑通过 **`StorageSynchronizer` 类**实现，主要是通过比对本地和远程的哈希值索引，再通过 `pull()` 和 `push()` 双向同步。
+  * **数据同步层（Synchronizing）**的逻辑通过 **`StorageSynchronizer` 类**实现，主要是通过比对本地和远程的哈希值索引，再通过 `pull()` 和 `push()` 双向同步。
   * 同步队列本身也存储在 `LocalStorage` 中，这样在离线或同步失败后可以多次重试。
 * 最后将 `AsyncLocalStorage`、`AliOSSStorage` 和 `StorageSynchronizer` 等类进行集成，封装为 **`HybridStorage` 类** ，该类同样实现了 `AsyncStorage` 接口，最终的用户只需通过该类进行本地及 OSS 云端数据的读写，而不用关心上述所有细节。
 
@@ -462,6 +479,19 @@ export class AliOSSStorage implements AsyncStorage {
 }
 ```
 
+OSS 提供的 `list()` 方法会返回包括文件修改时间、文件大小、etag 等在内的元数据对象，通过 `prefix` 参数可以指定递归查找文件的根目录。
+
+最后我们看一下实际使用 `AliOSSStorage` 的效果：
+
+```typescript
+await ossStorage.setItem('city', { name: 'Hangzhou' });
+await ossStorage.setItem('province', { name: 'Zhejiang' });
+```
+
+在执行了上述代码后，你可以在阿里云 Bucket 控制台中通过内置的文件管理器查看更新后的文件。
+
+![ali-oss-example-01](/Users/henry/workspaces/magiccube/hybrid-storage/docs/images/ali-oss-example-01.png)
+
 
 
 #### 3.3.5 存储同步器与异步任务队列
@@ -485,14 +515,12 @@ export class StorageSynchronizer {
     },
     readonly remoteStorage: AsyncStorage,
   ) {
-  	// TODO: 实现初始逻辑
+  	// 详见 Github
   }
 
   // ...
 }
 ```
-
-
 
 本地与远端数据同步的方法有很多种，这里我们可以先参考 Git：
 
@@ -500,7 +528,7 @@ export class StorageSynchronizer {
 * **推（`Push`）**，即将本地的**变更（`SyncCommit`）**以**异步任务队列（`AsyncQueue`）**提交到远端 OSS 的过程。
 * 因此一次同步的过程，就是先将远端的变更 `Pull` 到本地执行，然后再执行 `Push` 将本地的变更提交到远端 OSS。
 
-首先我们来看一下 Pull 过程的要点：
+我们来看一下 `Pull` 过程的要点：
 
 ##### 原子级操作 SyncCommit
 
@@ -518,6 +546,8 @@ const commit: SyncCommit = {
 ```
 
 ##### 差异与补丁 Diff & Patch
+
+![sync-pulling-flow](/Users/henry/workspaces/magiccube/hybrid-storage/docs/images/sync-pulling-flow.png)
 
 如下方代码所示，在 Pull 的过程中，首先我们需要根据两份分别来自本地和远端的索引，计算它们之间的差异（Diff），并且根据差异生成对应的补丁（Patch），这里补丁可以理解成为“解决”该差异需要进行的原子级操作，因此同样可以用 `SyncCommit` 来进行描述。
 
@@ -603,6 +633,8 @@ export class StorageSynchronizer {
 
 ##### 异步任务队列 AsyncQueue
 
+![async-queue](/Users/henry/workspaces/magiccube/hybrid-storage/docs/images/async-queue.png)
+
 同步的另一个难点则是异步任务队列，一个异步任务队列应当具备如下特征：
 
 * 队列中的每一个任务都是异步执行的，按“先进先出”的顺序依次执行
@@ -611,9 +643,7 @@ export class StorageSynchronizer {
 * 通过 `length` 和  `isEmpty` 属性可查看当前异步任务的执行情况
 * 可将未能完成的任务，存储在本地的 `LocalStorage` 中，当网络恢复时尝试继续执行
 
-异步任务队列的代码，请直接[在 Github 中查看](https://github.com/MagicCube/hybrid-storage/blob/master/src/queuing/AsyncQueue.ts)。
-
-
+* 异步任务队列的代码，请直接[在 Github 中查看](https://github.com/MagicCube/hybrid-storage/blob/master/src/queuing/AsyncQueue.ts)。
 
 异步任务队列被以 `commitQueue` 的形式封装在 `StorageSynchronizer` 中，在下一章节中我们会看到如何使用 `StorageSyncrhonizer`。
 
